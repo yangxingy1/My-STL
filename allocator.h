@@ -1,5 +1,5 @@
-#ifndef YXY__STL__ALLOCATOR
-#define YXY__STL__ALLOCATOR
+#ifndef YXY__STL__ALLOCATOR_H
+#define YXY__STL__ALLOCATOR_H
 
 #include<new>
 #include<cstddef>
@@ -33,10 +33,12 @@ public:
     Allocator(const Allocator<class U>&) noexcept {}
     ~Allocator() = default;
 
+    // 分配/释放内存 构造
     pointer allocate(size_type n)
     {
         if(n == 0)
             return nullptr;
+        // 只分配内存
         return static_cast<pointer>(::operator new(n * sizeof(value_type)));
     }
     void deallocate(pointer p, size_type)
@@ -45,8 +47,31 @@ public:
             return;
         ::operator delete(p);
     }
-    void destroy();
+    
+    // 容器内构造/析构类 调用构造函数
+    template<typename U, typename... Args>          // Args -> 构造类需要的所有参数
+    void construct(U* p, Args&&... args)
+    {
+        // 不分配内存只构造
+        ::new(static_cast<void*>(p)) U(std::forward<Args>(args)...);
+    }
+    template<typename U>
+    void destroy(U* p)
+    {
+        p->~U();
+    }
 
-}
+    // 计算最多元素个数
+    size_type max_size() const noexcept
+    {
+        return std::numeric_limits<size_type>::max() / sizeof(value_type);
+    }
 
-#endif
+    // 比较运算符重载 泛型 -> 一致
+    friend bool operator==(const Allocator&, const Allocator&) {return true};
+    friend bool operator!=(const Allocator&, const Allocator&) {return false};
+
+
+};
+
+#endif // YXY__STL__ALLOCATOR_H
