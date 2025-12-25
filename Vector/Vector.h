@@ -3,6 +3,8 @@
 
 #include "../allocator.h"
 #include<memory>
+#include<initializer_list>
+
 
 template<typename T, typename Alloc = Allocator<T>>
 class Vector
@@ -23,22 +25,23 @@ private:
     Alloc allocator;
 
 public:
-    // 构造函数
+    // ---------------------- 构造函数 --------------------------
     Vector()
     : start(nullptr), finish(nullptr), end_of_storage(nullptr) {}
-
+    // 容量
     Vector(size_type capacity);
+    // 容量 + 初值
+    Vector(size_type capacity, const value_type& value);
+    // 参数列表
+    Vector(std::initializer_list<value_type> il);
+    // 拷贝
+    Vector(const Vector& other);    
+    // 移动
+    Vector(Vector&& other) noexcept;
+    // 范围构造             暂不支持其他STL转换为Vector 只支持Vector的范围构造
+    Vector(const_iterator first, const_iterator last);
 
-    Vector(size_type capacity, const value_type& value); 
-
-    Vector(const Vector& other)
-    {
-        this->start = this->allocator.allocate(other.capacity);
-        this->finish = this->start + other.size();
-        this->end_of_storage = this->start + other.capacity;
-    }
-
-    //方法;
+    // ------------------------- 常用方法 ------------------------
     size_type size() const
     {return finish - start}
 
@@ -52,7 +55,13 @@ public:
     { return start }
 
     iterator end() const
-    { return end_of_storage }
+    { return finish}
+
+    // 扩容
+    void reserve(size_type n);
+
+    // 尾插
+    void push_back(value_type value);
 
     
 

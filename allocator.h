@@ -41,6 +41,7 @@ public:
         // 只分配内存
         return static_cast<pointer>(::operator new(n * sizeof(value_type)));
     }
+    // 传入初始(start) 直接释放连续的一块
     void deallocate(pointer p, size_type)
     {
         if(p == nullptr)
