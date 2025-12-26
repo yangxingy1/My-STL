@@ -3,6 +3,7 @@
 
 #include<new>
 #include<cstddef>
+#include<limits>
 #include<utility>
 
 // 内存分配类
@@ -23,14 +24,14 @@ public:
     struct rebind
     {
         using other = Allocator<U>;
-    }
+    };
 
 public:
     // --- 构造及析构 ---
     Allocator() = default;
     Allocator(const Allocator&) = default;
     template<class U>
-    Allocator(const Allocator<class U>&) noexcept {}
+    Allocator(const Allocator<U>&) noexcept {}
     ~Allocator() = default;
 
     // 分配/释放内存 构造
@@ -69,8 +70,8 @@ public:
     }
 
     // 比较运算符重载 泛型 -> 一致
-    friend bool operator==(const Allocator&, const Allocator&) {return true};
-    friend bool operator!=(const Allocator&, const Allocator&) {return false};
+    friend bool operator==(const Allocator&, const Allocator&) { return true; };
+    friend bool operator!=(const Allocator&, const Allocator&) { return false; };
 
 
 };

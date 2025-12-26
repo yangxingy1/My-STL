@@ -131,7 +131,7 @@ Vector<T, Alloc>::Vector(const_iterator first, const_iterator last)
 template<typename T, typename Alloc>
 void Vector<T, Alloc>::reserve(size_type n)
 {
-    // ---> 若新容量 <= 原容量 直接退出
+    // ---> 若 新容量 <= 原容量 直接退出
     if(n <= capacity())
         return;
     
@@ -169,4 +169,241 @@ void Vector<T, Alloc>::reserve(size_type n)
     start = new_start;
     finish = new_finish;
     end_of_storage = new_end_of_storage;
+}
+
+template<typename T, typename Alloc>
+void Vector<T, Alloc>::push_back(const value_type& value)
+{
+    // 扩容
+    if(finish == end_of_storage)
+        reserve(capacity() != 0 ? capacity() * 2 : 1);
+    
+    allocator.construct(finish, value);
+    ++finish;
+}
+
+template<typename T, typename Alloc>
+void Vector<T, Alloc>::push_back(value_type&& value)
+{
+    // 扩容
+    if(finish == end_of_storage)
+        reserve(capacity() != 0 ? capacity() * 2 : 1);
+
+    allocator.construct(finish, std::move(value));
+    ++finish;
+}
+
+template<typename T, typename Alloc>
+void Vector<T, Alloc>::pop_back()
+{
+    if(empty())
+        return;
+    
+    allocator.destroy(--finish);
+}
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::iterator Vector<T, Alloc>::insert(const_iterator pos, const value_type& value)
+{
+    size_type n = pos - start;
+    if(size() != capacity()) 
+    {
+        for(auto it = finish - 1;it>=pos;--it)
+        {
+            allocator.construct(it+1, std::move(*it));
+            allocator.destroy(it);
+        }
+        ++finish;
+        allocator.construct(start + n, value);
+        return start + n;
+    }
+    else
+    {
+        // 准备挪动
+        iterator new_start = allocator.allocate(capacity() != 0 ? capacity() * 2 : 1);
+        iterator new_finish = new_start;
+        iterator new_end_of_storage = new_start + (capacity() != 0 ? capacity() * 2 : 1);
+        iterator new_pos = start + n;
+        auto it = start;
+        
+        // 挪前一段
+        while(it < pos)
+        {
+            allocator.construct(new_finish, std::move(*it));
+            ++it;
+            ++new_finish;
+        }
+        // 构造新元素
+        allocator.construct(new_finish++, value);
+        // 挪后一段
+        while(it<finish)
+        {
+            allocator.construct(new_finish, std::move(*it));
+            ++it;
+            ++new_finish;
+        } 
+
+        // 销毁原Vector
+        for(auto i = start;i<finish;++i)
+            allocator.destroy(i);
+        allocator.deallocate(start, capacity());
+
+        // 挪指针
+        start = new_start;
+        finish = new_finish;
+        end_of_storage = new_end_of_storage;
+        return start + n;
+    }
+}
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::iterator Vector<T, Alloc>::insert(const_iterator pos, value_type&& value)
+{
+    size_type n = pos - start;
+    if(size() != capacity()) 
+    {
+        for(auto it = finish - 1;it>=pos;--it)
+        {
+            allocator.construct(it+1, std::move(*it));
+            allocator.destroy(it);
+        }
+        ++finish;
+        allocator.construct(start + n, std::move(value));
+        return start + n;
+    }
+    else
+    {
+        // 准备挪动
+        iterator new_start = allocator.allocate(capacity() != 0 ? capacity() * 2 : 1);
+        iterator new_finish = new_start;
+        iterator new_end_of_storage = new_start + (capacity() != 0 ? capacity() * 2 : 1);
+        iterator new_pos = start + n;
+        auto it = start;
+        
+        // 挪前一段
+        while(it < pos)
+        {
+            allocator.construct(new_finish, std::move(*it));
+            ++it;
+            ++new_finish;
+        }
+        // 构造新元素
+        allocator.construct(new_finish++, std::move(value));
+        // 挪后一段
+        while(it<finish)
+        {
+            allocator.construct(new_finish, std::move(*it));
+            ++it;
+            ++new_finish;
+        } 
+
+        // 销毁原Vector
+        for(auto i = start;i<finish;++i)
+            allocator.destroy(i);
+        allocator.deallocate(start, capacity());
+
+        // 挪指针
+        start = new_start;
+        finish = new_finish;
+        end_of_storage = new_end_of_storage;
+        return start + n;
+    }
+}
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::iterator Vector<T, Alloc>::erase(const_iterator pos)
+{
+    if(!pos || pos >= finish)
+        return start + (pos - start);
+
+    size_type n = pos - start;
+    for(auto it = start + n;it<finish - 1;++it)
+        *it = std::move(*(it+1));
+    allocator.destroy(--finish);
+    return start + n;
+}
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::iterator Vector<T, Alloc>::erase(const_iterator first, const_iterator last)
+{
+    if(!first || !last || last <= first || last > finish || first < start)
+        return start + (first - start);
+    
+    size_type n = last - first;
+    size_type k = first - start;
+    for(auto it = start + k;it+n<finish;++it)
+        *it = std::move(*(it + n));
+    iterator new_finish = finish - n;
+    for(auto it = new_finish;it<finish;++it)
+        allocator.destroy(it);
+    finish = new_finish;
+    return start + k;
+}
+// 这里可以使用auto - C14特性来推到返回值类型 
+// 这样更方便编写代码 但不够清晰 这里选择一个函数使用此特性
+// 选择了front() 函数
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::reference Vector<T, Alloc>::operator[](size_type n)
+{
+    return *(start + n);
+}
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::const_reference Vector<T, Alloc>::operator[](size_type n) const
+{
+    return *(start + n);
+}
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::reference Vector<T, Alloc>::at(size_type n)
+{
+    if(n >= size())
+        throw std::out_of_range("Vector:: index out of range!");
+    
+    return *(start + n);
+}
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::const_reference Vector<T, Alloc>::at(size_type n) const
+{
+    if(n >= size())
+        throw std::out_of_range("Vector:: index out of range!");
+
+    return *(start + n);
+}
+
+template<typename T, typename Alloc>
+auto& Vector<T, Alloc>::front() 
+{
+    return *start;
+}
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::const_reference Vector<T, Alloc>::front() const
+{
+    return *start;
+}
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::reference Vector<T, Alloc>::back()
+{
+    return *(finish - 1);
+}
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::const_reference Vector<T, Alloc>::back() const
+{
+    return *(finish - 1);
+}
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::pointer Vector<T, Alloc>::data() noexcept
+{
+    return start;
+}
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::const_pointer Vector<T, Alloc>::data() const noexcept
+{
+    return start;
 }
