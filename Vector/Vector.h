@@ -59,6 +59,10 @@ public:
     iterator end() const
     { return finish; }
 
+    // 赋值
+    Vector& operator=(const Vector& rhs);
+    Vector& operator=(Vector&& rhs);
+
     // 扩容
     void reserve(size_type n);
 

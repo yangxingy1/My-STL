@@ -76,7 +76,7 @@ Vector<T, Alloc>::Vector(const Vector& other)
     finish = start;
     try
     {
-        for(const auto it = other.begin();it!=other.end();++it)
+        for(auto it = other.begin();it!=other.end();++it)
         {
             this->allocator.construct(finish, *it);
             ++finish;
@@ -127,6 +127,59 @@ Vector<T, Alloc>::Vector(const_iterator first, const_iterator last)
     }
     
 }
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::Vector& Vector<T, Alloc>::operator=(const Vector& rhs) 
+{
+    if(this != &rhs)
+    {
+        if(start)
+        {
+            for(auto it = start;it!=finish;++it)
+                allocator.destroy(it);
+            allocator.deallocate(start, capacity());
+        }
+
+        size_type len = rhs.size();
+        size_type cap = rhs.capacity();
+        
+        start = allocator.allocate(cap);
+        finish = start;
+        end_of_storage = start + cap;
+
+        for(auto it = rhs.start;it != rhs.finish;++it)
+        {
+            allocator.construct(finish, *it);
+            ++finish;
+        }
+    }
+
+    return *this;
+}
+
+template<typename T, typename Alloc>
+typename Vector<T, Alloc>::Vector& Vector<T, Alloc>::operator=(Vector&& rhs)
+{
+    if(this != &rhs)
+    {
+        if(start)
+        {
+            for(auto it = start;it!=finish;++it)
+                allocator.destroy(it);
+            allocator.deallocate(start, capacity());
+        }
+
+        start = rhs.start;
+        finish = rhs.finish;
+        end_of_storage = rhs.end_of_storage;
+
+        rhs.start = nullptr;
+        rhs.finish = nullptr;
+        rhs.end_of_storage = nullptr;
+    }
+    return *this;
+}
+
 
 template<typename T, typename Alloc>
 void Vector<T, Alloc>::reserve(size_type n)
