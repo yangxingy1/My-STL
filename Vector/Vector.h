@@ -72,12 +72,18 @@ public:
     // 尾插 - 右值: 移动
     void push_back(value_type&& value);
 
+    // 尾插 - 无临时对象
+    template<typename... Args>
+    void emplace_back(Args&&... args);
+
     // 尾出 
     void pop_back();
 
     // 插入  拷贝/移动
     iterator insert(const_iterator pos, const value_type& value);
     iterator insert(const_iterator pos, value_type&& value);
+    template<typename... Args>
+    iterator emplace(const_iterator pos, Args&&... args);
 
     // 删除 返回删除位置迭代器
     iterator erase(const_iterator pos);
@@ -100,6 +106,8 @@ public:
 
     pointer data() noexcept;
     const_pointer data() const noexcept;
+
+    ~Vector();
 };
 
 #include "Vector.cpp"

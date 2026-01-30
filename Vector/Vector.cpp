@@ -247,6 +247,16 @@ void Vector<T, Alloc>::push_back(value_type&& value)
 }
 
 template<typename T, typename Alloc>
+template<typename... Args>
+void Vector<T, Alloc>::emplace_back(Args&&... args)
+{
+    if(finish == end_of_storage)
+        reserve(capacity() != 0 ? capacity() * 2 : 1);
+    allocator.construct(finish, std::forward<Args>(args)...);
+    ++finish;
+}
+
+template<typename T, typename Alloc>
 void Vector<T, Alloc>::pop_back()
 {
     if(empty())
@@ -364,6 +374,59 @@ typename Vector<T, Alloc>::iterator Vector<T, Alloc>::insert(const_iterator pos,
 }
 
 template<typename T, typename Alloc>
+template<typename... Args>
+typename Vector<T, Alloc>::iterator Vector<T, Alloc>::emplace(const_iterator pos, Args&&... args)
+{
+    size_type n = pos - start;
+    if(size() != capacity()) 
+    {
+        // 这里使用赋值运算 增加缓存复用
+        allocator.construct(finish, std::move(*(finish - 1)));
+        std::move_backward(pos, finish - 1, finish);
+        ++finish;
+        allocator.construct(start + n, std::forward<Args>(args)...);
+        return start + n;
+    }
+    else
+    {
+        // 准备挪动
+        iterator new_start = allocator.allocate(capacity() != 0 ? capacity() * 2 : 1);
+        iterator new_finish = new_start;
+        iterator new_end_of_storage = new_start + (capacity() != 0 ? capacity() * 2 : 1);
+        iterator new_pos = start + n;
+        auto it = start;
+        
+        // 挪前一段
+        while(it < pos)
+        {
+            allocator.construct(new_finish, std::move(*it));
+            ++it;
+            ++new_finish;
+        }
+        // 构造新元素
+        allocator.construct(new_finish++, std::forward<Args>(args)...);
+        // 挪后一段
+        while(it<finish)
+        {
+            allocator.construct(new_finish, std::move(*it));
+            ++it;
+            ++new_finish;
+        } 
+
+        // 销毁原Vector
+        for(auto i = start;i<finish;++i)
+            allocator.destroy(i);
+        allocator.deallocate(start, capacity());
+
+        // 挪指针
+        start = new_start;
+        finish = new_finish;
+        end_of_storage = new_end_of_storage;
+        return start + n;
+    }
+}
+
+template<typename T, typename Alloc>
 typename Vector<T, Alloc>::iterator Vector<T, Alloc>::erase(const_iterator pos)
 {
     if(!pos || pos >= finish)
@@ -459,4 +522,15 @@ template<typename T, typename Alloc>
 typename Vector<T, Alloc>::const_pointer Vector<T, Alloc>::data() const noexcept
 {
     return start;
+}
+
+template<typename T, typename Alloc>
+Vector<T, Alloc>::~Vector()
+{
+    if(start)
+    {
+        for(auto it = start; it != finish; ++it)
+            allocator.destroy(it);
+        allocator.deallocate(start, capacity());
+    }
 }
