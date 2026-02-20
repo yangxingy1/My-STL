@@ -2,8 +2,8 @@
 #define YXY__STL__UNORDERED_MAP_H
 
 
-#include<functional>    // std::hash
-#include<utility>       // std::pair
+#include <functional>    // std::hash
+#include <utility>       // std::pair
 #include "../allocator.h"
 #include "../Vector/Vector.h"
 
@@ -23,7 +23,7 @@ struct HashNode
 
     HashNode* next;
 
-    HashNode(const Key& key, Value& value)
+    HashNode(const Key& key, const Value& value)
     : data(key, value), next(nullptr) {}
 
     HashNode(const Key& key, Value&& value)
@@ -32,6 +32,7 @@ struct HashNode
     ~HashNode() = default;
 };
 
+// 前向声明
 template<
     typename Key,
     typename Value,
@@ -39,11 +40,76 @@ template<
     typename KeyEqual = std::equal_to<Key>,
     typename Alloc = Allocator<HashNode<Key, Value>>
 >
+class Unordered_map;
+
+// 迭代器
+template<typename Key, typename Value>
+struct iterator
+{
+    using node_type          = HashNode;
+    using value_type         = std::pair<Key, Value>;
+    using reference          = value_type&;
+    using pointer            = value_type*;
+    using size_type          = size_t;
+
+    // 当前指向的结点
+    node_type* current_node;
+    // 所属hashmap
+    Unordered_map* map_instance;
+    // 所在桶
+    size_type current_bucket;
+
+    // 构造
+    iterator(node_type* node, Unordered_map* instance, size_type bucket)
+    : current_node(node), map_instance(instance), current_bucket(bucket) {}
+
+    // 重载 解引用 比较 自增
+    reference operator*() const { return current_node -> data; }
+    reference operator->() const { return &(current->data); }
+
+    bool operator==(const iterator& other) const { return current_node == other.current_node; }
+    bool operator!=(const iterator& other) const { return current_node != other.current_node; }
+
+    iterator& operator++() 
+    {
+        // 当前链表未走完
+        if(current_node->next != nullptr)
+            current_node = current_node->next;
+        // 后面的桶中找下一个非空点
+        else
+        {
+            ++current_bucket;
+            while(current_bucket < map_instance->buckets.size() && map_instance->buckets[current_bucket] == nullptr)
+                ++current_bucket;
+            
+            // 找到非空结点
+            if(current_bucket < map_instance->buckets.size())
+                current_node = map_instance->buckets[current_bucket];
+            // 到end
+            else
+                current_node = nullptr;
+        }
+        return *this;
+    }
+
+
+};
+
+template<
+    typename Key,
+    typename Value,
+    typename Hash,
+    typename KeyEqual,
+    typename Alloc 
+>
 class Unordered_map
 {
 public:
-    using node_type = HashNode<Key, Value>;
-    using size_type = size_t;
+    using node_type            = HashNode<Key, Value>;
+    using value_type           = std::pair<Key, Value>;
+    using reference            = value_type&;
+    using const_reference      = const value_type&;
+    using size_type            = size_t;
 
 private:
     // 桶数组
@@ -64,6 +130,38 @@ private:
     {
         return hasher(key) % bucket_count;
     }
+
+public:
+    // -------------------------------- 构造与析构 ----------------------------
+    Unordered_map(size_type bucket_count = 8);
+    // 拷贝
+    Unordered_map(const Unordered_map& other);
+    // 移动
+    Unordered_map(Unordered_map&& other);
+
+
+    ~Unordered_map();
+    
+    // -------------------------------- 常用方法 ------------------------------
+    size_type size() { return _size; }
+    bool empty() { return _size == 0 ;}
+
+    void rehash(size_type new_bucket_count);
+
+    // 插入
+    std::pair<node_type*, bool> insert(const Key& key, const Value& value);
+    std::pair<node_type*, bool> insert(const Key& key, Value&& value);
+
+    // 删除
+    bool erase();
+    void clear();
+
+    // 访问
+    node_type* find(const Key& key);
+    Value& operator[](const Key& key);
+
+    // 友元声明 允许迭代器访问
+    friend struct iterator<Key, Value>;
 };
 
 #include "Unordered_map.cpp"
