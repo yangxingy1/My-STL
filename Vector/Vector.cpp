@@ -180,7 +180,7 @@ typename Vector<T, Alloc>::Vector& Vector<T, Alloc>::operator=(Vector&& rhs)
     return *this;
 }
 
-
+// 重定义 capacity 大小
 template<typename T, typename Alloc>
 void Vector<T, Alloc>::reserve(size_type n)
 {
