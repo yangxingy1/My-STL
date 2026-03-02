@@ -37,7 +37,7 @@ template<
     typename Value,
     typename Hash = std::hash<Key>,
     typename KeyEqual = std::equal_to<Key>,
-    typename Alloc = Allocator<HashNode<const Key, Value>>
+    typename Alloc = Allocator<HashNode<Key, Value>>
 >
 class Unordered_map
 {
@@ -97,7 +97,7 @@ public:
 
 private:
     // 桶数组
-    Vector<pointer> buckets;
+    Vector<node_type*> buckets;
     // 元素总数
     size_type _size;
     
@@ -120,37 +120,38 @@ public:
     Unordered_map(size_type bucket_count = 8);
     // 拷贝
     Unordered_map(const Unordered_map& other);
+    Unordered_map& operator=(const Unordered_map& other);
     // 移动
-    Unordered_map(Unordered_map&& other);
-
+    Unordered_map(Unordered_map&& other) noexcept;
+    Unordered_map& operator=(Unordered_map&& other) noexcept;
 
     ~Unordered_map();
     
     // -------------------------------- 常用方法 ------------------------------
     size_type size() const { return _size; }
     bool empty() const { return _size == 0; }
-    iterator begin() const
+    iterator begin() 
     {
         for(size_type i=0; i<buckets.size(); ++i)
-            if(bukcets[i] != nullptr)
-                return buckets[i];
+            if(buckets[i] != nullptr)
+                return iterator(buckets[i], this, i);
         return end();
     }
-    iterator end() const { return iterator(nullptr, this, buckets.size()); }
+    iterator end() { return iterator(nullptr, this, buckets.size()); }
 
     void rehash(size_type new_bucket_count);
 
     // 插入
-    std::pair<pointer, bool> insert(const Key& key, const Value& value);
-    std::pair<pointer, bool> insert(const Key& key, Value&& value);
+    std::pair<node_type*, bool> insert(const Key& key, const Value& value);
+    std::pair<node_type*, bool> insert(const Key& key, Value&& value);
 
     // 删除
     bool erase(const Key& key);
     void clear();
 
     // 访问
-    iterator find(const Key& key) const;
-    Value& operator[](const Key& key) const;
+    iterator find(const Key& key);
+    Value& operator[](const Key& key);
 
 };
 
